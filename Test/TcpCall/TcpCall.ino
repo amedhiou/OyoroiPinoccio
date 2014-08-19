@@ -11,20 +11,22 @@
 /*
  * Getting this to work:
  * -Make sure you have Arduino IDE 1.5
- * -Go to your arduino IDE and point the sketchbook location to THIS PROJECT ROOT
- *  where libraries and hardware resides
+ * -Go to your arduino IDE and point the sketchbook location to THIS PROJECT
+ *  ROOT where libraries and hardware resides
  * -Restart your arduino IDE
  */
 
 /*
- * According to the new Arduino include specification, "When the user imports a library
- * into their sketch (from the "Tools > Import Library" menu), an #include statement will
- * be added for all header (.h) files in the src/ directory (but not its sub-folders)
+ * According to the new Arduino include specification, "When the user imports a
+ * library into their sketch (from the "Tools > Import Library" menu), an
+ * #include statement will be added for all header (.h) files in the src/
+ * directory (but not its sub-folders)
  *
  * To get this to work:
- * -Copy (NOT SYMLINK!!!) Wifi.h in this directory to OyoroiPinoccio/libraries/pinoccio/src folder
+ * -Run link.bash which will copy, not symlink, Oyoroi.h into the directory
+ *  OyoroiPinoccio/libraries/pinoccio/src folder
  */
-#include <Wifi.h>
+#include <Oyoroi.h>
 
 #define SKETCH_NAME "Custom"
 #define SKETCH_BUILD -1
@@ -44,45 +46,43 @@ void loop() {
 
 
 /*
- * 1) Take the client from Pinocchio
- * 2) Check if it's connected and shit
- * 3) Use that to connect to our server
+ * Create a new client but reuse the module
  */
-
 void connectToServer() {
-  if ((pinoccio::WifiModule::instance.bp() &&
-       pinoccio::WifiModule::instance.bp()->client.connected())) {
+  GSModule *gsPtr;
+  gsPtr = &pinoccio::WifiModule::instance.bp()->gs;
 
-    GSTcpClient *client;
-    client = &(pinoccio::WifiModule::instance.bp()->client);
+  Serial.println(1);
 
-    GSModule *gs;
-    gs = &(pinoccio::WifiModule::instance.bp()->gs);
+  GSTcpClient client = GSTcpClient(*gsPtr);
+  IPAddress ip;
+  char* url = "http://192.168.19.114";
 
-    IPAddress ip;
-    char* url = "http://localhost";
+  Serial.println(2);
 
-    if (!gs->parseIpAddress(&ip, url)) {
-      ip = gs->dnsLookup(HqHandler::host().c_str());
+  if (!gsPtr->parseIpAddress(&ip, url)) {
+    ip = gsPtr->dnsLookup(url);
 
-      if (ip == INADDR_NONE) {
-        Serial.print(F("Failed to resolve "));
-        Serial.print(HqHandler::host());
-        Serial.println(F(", reassociating to retry"));
-        return;
-      }
-    }
-
-    if (!client->connect(ip, 8080)) {
-      Serial.println(F("HQ connection failed, reassociating to retry"));
-      pinoccio::WifiModule::instance.bp()->associate();
+    if (ip == INADDR_NONE) {
+      Serial.print(F("Failed to resolve "));
+      Serial.println(F(", reassociating to retry"));
       return;
     }
+  }
 
-    client->print("Hello");   // Should print a raw GET or POST request
-    client->flush();
+  Serial.println(3);
 
+  if (!client.connect(ip, 8000)) {
+    Serial.println(F("HQ connection failed, reassociating to retry"));
+    pinoccio::WifiModule::instance.bp()->associate();
     return;
   }
+
+  Serial.println(4);
+
+  client.print("Hello");   // Should print a raw GET or POST request
+  client.flush();
+
+  return;
 }
 
