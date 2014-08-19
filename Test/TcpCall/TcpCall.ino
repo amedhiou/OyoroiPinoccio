@@ -1,3 +1,4 @@
+
 #include <SPI.h>
 #include <Wire.h>
 #include <Scout.h>
@@ -38,6 +39,7 @@ void setup() {
 void loop() {
   Scout.loop();
   // Add custom loop code here
+  connectToServer();
 }
 
 
@@ -51,14 +53,17 @@ void connectToServer() {
   if ((pinoccio::WifiModule::instance.bp() &&
        pinoccio::WifiModule::instance.bp()->client.connected())) {
 
-    //GSTcpClient *client;
-    //*client = pinoccio::WifiModule::instance.bp()->client;
+    GSTcpClient *client;
+    client = &(pinoccio::WifiModule::instance.bp()->client);
+
+    GSModule *gs;
+    gs = &(pinoccio::WifiModule::instance.bp()->gs);
 
     IPAddress ip;
     char* url = "http://localhost";
 
-    if (!gs.parseIpAddress(&ip, url)) {
-      ip = gs.dnsLookup(HqHandler::host().c_str());
+    if (!gs->parseIpAddress(&ip, url)) {
+      ip = gs->dnsLookup(HqHandler::host().c_str());
 
       if (ip == INADDR_NONE) {
         Serial.print(F("Failed to resolve "));
@@ -68,14 +73,14 @@ void connectToServer() {
       }
     }
 
-    if (!client.connect(ip, 8080)) {
+    if (!client->connect(ip, 8080)) {
       Serial.println(F("HQ connection failed, reassociating to retry"));
-      associate();
+      pinoccio::WifiModule::instance.bp()->associate();
       return;
     }
 
-    client.print("Hello");
-    client.flush();
+    client->print("Hello");   // Should print a raw GET or POST request
+    client->flush();
 
     return;
   }
